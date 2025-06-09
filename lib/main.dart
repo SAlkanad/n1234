@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 
 import 'firebase_options.dart';
 import 'controllers/auth_controller.dart';
@@ -17,31 +16,26 @@ import 'services/notification_service.dart';
 import 'services/background_service.dart';
 import 'services/status_update_service.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase with options
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   // Initialize other services
   await NotificationService.initialize();
   tz.initializeTimeZones();
-  
-  
-  
-  
-  
+
   // Start background services
   BackgroundService.startBackgroundTasks();
   StatusUpdateService.startAutoStatusUpdate();
-  
-  runApp(UmrahVisaApp());
+
+  runApp(PassengersApp());
 }
 
-class UmrahVisaApp extends StatelessWidget {
+class PassengersApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
