@@ -14,26 +14,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _rememberMe = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedCredentials();
-  }
-
-  Future<void> _loadSavedCredentials() async {
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final credentials = await authController.getSavedCredentials();
-    
-    if (credentials['rememberMe'] == 'true') {
-      setState(() {
-        _usernameController.text = credentials['username'] ?? '';
-        _passwordController.text = credentials['password'] ?? '';
-        _rememberMe = true;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(60),
                     ),
                     child: Icon(
-                      Icons.directions_car,
+                      Icons.mosque,
                       size: 60,
                       color: Colors.blue.shade800,
                     ),
@@ -81,20 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     isPassword: true,
                     validator: ValidationUtils.validatePassword,
                   ),
-                  SizedBox(height: 8),
-
-                  CheckboxListTile(
-                    title: Text('تذكرني'),
-                    value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        _rememberMe = value ?? false;
-                      });
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SizedBox(height: 16),
+                  SizedBox(height: 24),
                   
                   SizedBox(
                     width: double.infinity,
@@ -122,7 +89,6 @@ class _LoginScreenState extends State<LoginScreen> {
         final success = await authController.login(
           _usernameController.text,
           _passwordController.text,
-          rememberMe: _rememberMe,
         );
         
         if (success) {

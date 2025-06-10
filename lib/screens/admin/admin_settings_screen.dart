@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:local_auth/local_auth.dart';
 import '../../controllers/settings_controller.dart';
-import '../../services/biometric_auth_service.dart';
 import '../../core/widgets/custom_text_field.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
@@ -10,9 +8,8 @@ class AdminSettingsScreen extends StatefulWidget {
   State<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
 }
 
-class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTickerProviderStateMixin {
+class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TabController _tabController;
   
   // Status Settings Controllers
   final _greenDaysController = TextEditingController();
@@ -45,18 +42,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTi
   final _clientWhatsappController = TextEditingController();
   final _userWhatsappController = TextEditingController();
 
-  // Biometric Settings
-  bool _biometricEnabled = false;
-  bool _biometricAvailable = false;
-  List<BiometricType> _availableBiometrics = [];
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadSettings();
-      _checkBiometricAvailability();
     });
   }
 
@@ -64,18 +54,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTi
     final settingsController = Provider.of<SettingsController>(context, listen: false);
     await settingsController.loadAdminSettings();
     _populateFields();
-  }
-
-  Future<void> _checkBiometricAvailability() async {
-    final available = await BiometricService.isBiometricAvailable();
-    final enabled = await BiometricService.isBiometricEnabled();
-    final biometrics = await BiometricService.getAvailableBiometrics();
-    
-    setState(() {
-      _biometricAvailable = available;
-      _biometricEnabled = enabled;
-      _availableBiometrics = biometrics;
-    });
   }
 
   void _populateFields() {
@@ -140,17 +118,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTi
             onPressed: _saveSettings,
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: [
-            Tab(text: 'حالة العملاء'),
-            Tab(text: 'إشعارات العملاء'),
-            Tab(text: 'إشعارات المستخدمين'),
-            Tab(text: 'رسائل الواتساب'),
-            Tab(text: 'الأمان'),
-          ],
-        ),
       ),
       body: Consumer<SettingsController>(
         builder: (context, settingsController, child) {
@@ -160,629 +127,188 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTi
 
           return Form(
             key: _formKey,
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildStatusSettingsTab(),
-                _buildClientNotificationTab(),
-                _buildUserNotificationTab(),
-                _buildWhatsappMessagesTab(),
-                _buildSecurityTab(),
-              ],
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildStatusSettingsCard(),
+                  SizedBox(height: 16),
+                  _buildClientNotificationCard(),
+                  SizedBox(height: 16),
+                  _buildUserNotificationCard(),
+                  SizedBox(height: 16),
+                  _buildWhatsappMessagesCard(),
+                  SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _saveSettings,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text('حفظ جميع الإعدادات', style: TextStyle(fontSize: 18)),
+                  ),
+                ],
+              ),
             ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _saveSettings,
-        child: Icon(Icons.save),
-        tooltip: 'حفظ الإعدادات',
-      ),
     );
   }
 
-  Widget _buildSecurityTab() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'إعدادات الأمان',
-            'تحكم في خيارات الأمان والمصادقة',
-            Icons.security,
-          ),
-          SizedBox(height: 24),
-          
-          // Biometric Settings Card
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStatusSettingsCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('إعدادات حالة العملاء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.fingerprint, color: Colors.white, size: 20),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'المصادقة البيومترية',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: _biometricEnabled,
-                      onChanged: _biometricAvailable ? _toggleBiometric : null,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16),
-                
-                if (!_biometricAvailable)
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade300),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'المصادقة البيومترية غير متوفرة على هذا الجهاز',
-                            style: TextStyle(color: Colors.orange.shade800),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else ...[
-                  Text(
-                    'تفعيل تسجيل الدخول بالبصمة أو بصمة الوجه',
-                    style: TextStyle(color: Colors.grey.shade600),
+                Expanded(
+                  child: CustomTextField(
+                    controller: _greenDaysController,
+                    label: 'أيام الحالة الخضراء',
+                    keyboardType: TextInputType.number,
+                    validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
                   ),
-                  SizedBox(height: 12),
-                  
-                  if (_availableBiometrics.isNotEmpty) ...[
-                    Text(
-                      'الطرق المتاحة:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: _availableBiometrics.map((type) {
-                        return Chip(
-                          avatar: Icon(
-                            _getBiometricIcon(type),
-                            size: 16,
-                            color: Colors.blue,
-                          ),
-                          label: Text(
-                            BiometricService.getBiometricTypeText(type),
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          backgroundColor: Colors.blue.shade50,
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ],
-              ],
-            ),
-          ),
-          
-          SizedBox(height: 16),
-          
-          // Additional Security Settings
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.shield, color: Colors.white, size: 20),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'إعدادات إضافية',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
                 ),
-                SizedBox(height: 16),
-                
-                ListTile(
-                  leading: Icon(Icons.lock_clock, color: Colors.green),
-                  title: Text('مدة انتهاء الجلسة'),
-                  subtitle: Text('30 دقيقة'),
-                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Implement session timeout settings
-                  },
+                SizedBox(width: 8),
+                Expanded(
+                  child: CustomTextField(
+                    controller: _yellowDaysController,
+                    label: 'أيام الحالة الصفراء',
+                    keyboardType: TextInputType.number,
+                    validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+                  ),
                 ),
-                
-                ListTile(
-                  leading: Icon(Icons.password, color: Colors.green),
-                  title: Text('سياسة كلمات المرور'),
-                  subtitle: Text('6 أحرف كحد أدنى'),
-                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Implement password policy settings
-                  },
-                ),
-                
-                ListTile(
-                  leading: Icon(Icons.history, color: Colors.green),
-                  title: Text('سجل العمليات'),
-                  subtitle: Text('عرض سجل النشاطات'),
-                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Implement activity log
-                  },
+                SizedBox(width: 8),
+                Expanded(
+                  child: CustomTextField(
+                    controller: _redDaysController,
+                    label: 'أيام الحالة الحمراء',
+                    keyboardType: TextInputType.number,
+                    validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _getBiometricIcon(BiometricType type) {
-    switch (type) {
-      case BiometricType.face:
-        return Icons.face;
-      case BiometricType.fingerprint:
-        return Icons.fingerprint;
-      case BiometricType.iris:
-        return Icons.visibility;
-      default:
-        return Icons.security;
-    }
-  }
-
-  Future<void> _toggleBiometric(bool value) async {
-    try {
-      if (value) {
-        await BiometricService.setBiometricEnabled(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم تفعيل المصادقة البيومترية'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        await BiometricService.disableBiometric();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم إلغاء تفعيل المصادقة البيومترية'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      
-      setState(() {
-        _biometricEnabled = value;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطأ في تغيير إعدادات البصمة: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          ],
         ),
-      );
-    }
-  }
-
-  Widget _buildStatusSettingsTab() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'إعدادات حالة العملاء',
-            'تحديد عدد الأيام لكل حالة من حالات العملاء',
-            Icons.traffic,
-          ),
-          SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildNumberField(
-                  controller: _greenDaysController,
-                  label: 'أيام الحالة الخضراء',
-                  icon: Icons.check_circle,
-                  color: Colors.green,
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: _buildNumberField(
-                  controller: _yellowDaysController,
-                  label: 'أيام الحالة الصفراء',
-                  icon: Icons.warning,
-                  color: Colors.orange,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _buildNumberField(
-            controller: _redDaysController,
-            label: 'أيام الحالة الحمراء',
-            icon: Icons.error,
-            color: Colors.red,
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildClientNotificationTab() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'إعدادات إشعارات العملاء',
-            'تحديد متى وكم مرة يتم إرسال الإشعارات للعملاء',
-            Icons.people,
-          ),
-          SizedBox(height: 24),
-          _buildNotificationTierCard(
-            'المستوى الأول - تنبيه عادي',
-            _clientTier1DaysController,
-            _clientTier1FreqController,
-            _clientTier1MessageController,
-            Colors.green,
-            Icons.info,
-          ),
-          SizedBox(height: 16),
-          _buildNotificationTierCard(
-            'المستوى الثاني - تحذير',
-            _clientTier2DaysController,
-            _clientTier2FreqController,
-            _clientTier2MessageController,
-            Colors.orange,
-            Icons.warning,
-          ),
-          SizedBox(height: 16),
-          _buildNotificationTierCard(
-            'المستوى الثالث - عاجل',
-            _clientTier3DaysController,
-            _clientTier3FreqController,
-            _clientTier3MessageController,
-            Colors.red,
-            Icons.error,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserNotificationTab() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'إعدادات إشعارات المستخدمين',
-            'تحديد متى وكم مرة يتم إرسال الإشعارات للمستخدمين',
-            Icons.admin_panel_settings,
-          ),
-          SizedBox(height: 24),
-          _buildNotificationTierCard(
-            'المستوى الأول - تنبيه عادي',
-            _userTier1DaysController,
-            _userTier1FreqController,
-            _userTier1MessageController,
-            Colors.green,
-            Icons.info,
-          ),
-          SizedBox(height: 16),
-          _buildNotificationTierCard(
-            'المستوى الثاني - تحذير',
-            _userTier2DaysController,
-            _userTier2FreqController,
-            _userTier2MessageController,
-            Colors.orange,
-            Icons.warning,
-          ),
-          SizedBox(height: 16),
-          _buildNotificationTierCard(
-            'المستوى الثالث - عاجل',
-            _userTier3DaysController,
-            _userTier3FreqController,
-            _userTier3MessageController,
-            Colors.red,
-            Icons.error,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWhatsappMessagesTab() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'رسائل الواتساب الافتراضية',
-            'النصوص المستخدمة عند إرسال رسائل الواتساب',
-            Icons.message,
-          ),
-          SizedBox(height: 24),
-          _buildMessageCard(
-            'رسالة العملاء',
-            _clientWhatsappController,
-            'يمكن استخدام {clientName} في الرسالة',
-            Icons.person,
-            Colors.blue,
-          ),
-          SizedBox(height: 16),
-          _buildMessageCard(
-            'رسالة المستخدمين',
-            _userWhatsappController,
-            'يمكن استخدام {userName} في الرسالة',
-            Icons.admin_panel_settings,
-            Colors.green,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, String subtitle, IconData icon) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade50, Colors.blue.shade100],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildClientNotificationCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('إعدادات إشعارات العملاء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            _buildNotificationTier('المستوى الأول', _clientTier1DaysController, _clientTier1FreqController, _clientTier1MessageController),
+            SizedBox(height: 16),
+            _buildNotificationTier('المستوى الثاني', _clientTier2DaysController, _clientTier2FreqController, _clientTier2MessageController),
+            SizedBox(height: 16),
+            _buildNotificationTier('المستوى الثالث', _clientTier3DaysController, _clientTier3FreqController, _clientTier3MessageController),
+          ],
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.blue.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildNumberField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: CustomTextField(
-        controller: controller,
-        label: label,
-        icon: icon,
-        keyboardType: TextInputType.number,
-        validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+  Widget _buildUserNotificationCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('إعدادات إشعارات المستخدمين', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            _buildNotificationTier('المستوى الأول', _userTier1DaysController, _userTier1FreqController, _userTier1MessageController),
+            SizedBox(height: 16),
+            _buildNotificationTier('المستوى الثاني', _userTier2DaysController, _userTier2FreqController, _userTier2MessageController),
+            SizedBox(height: 16),
+            _buildNotificationTier('المستوى الثالث', _userTier3DaysController, _userTier3FreqController, _userTier3MessageController),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildNotificationTierCard(
-    String title,
-    TextEditingController daysController,
-    TextEditingController freqController,
-    TextEditingController messageController,
-    Color color,
-    IconData icon,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: Colors.white, size: 20),
+  Widget _buildNotificationTier(String title, TextEditingController daysController, TextEditingController freqController, TextEditingController messageController) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: CustomTextField(
+                controller: daysController,
+                label: 'الأيام',
+                keyboardType: TextInputType.number,
+                validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: CustomTextField(
-                  controller: daysController,
-                  label: 'عدد الأيام',
-                  icon: Icons.calendar_today,
-                  keyboardType: TextInputType.number,
-                  validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: CustomTextField(
-                  controller: freqController,
-                  label: 'التكرار يومياً',
-                  icon: Icons.repeat,
-                  keyboardType: TextInputType.number,
-                  validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          CustomTextField(
-            controller: messageController,
-            label: 'نص الرسالة',
-            icon: Icons.message,
-            maxLines: 3,
-            validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageCard(
-    String title,
-    TextEditingController controller,
-    String hint,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: Colors.white, size: 20),
-              ),
-              SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          CustomTextField(
-            controller: controller,
-            label: 'نص الرسالة',
-            icon: Icons.message,
-            maxLines: 4,
-            validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
-          ),
-          SizedBox(height: 8),
-          Text(
-            hint,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontStyle: FontStyle.italic,
             ),
-          ),
-        ],
+            SizedBox(width: 8),
+            Expanded(
+              child: CustomTextField(
+                controller: freqController,
+                label: 'التكرار يومياً',
+                keyboardType: TextInputType.number,
+                validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        CustomTextField(
+          controller: messageController,
+          label: 'نص الرسالة',
+          maxLines: 2,
+          validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWhatsappMessagesCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('رسائل الواتساب الافتراضية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            CustomTextField(
+              controller: _clientWhatsappController,
+              label: 'رسالة العملاء',
+              maxLines: 3,
+              validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+            ),
+            SizedBox(height: 16),
+            CustomTextField(
+              controller: _userWhatsappController,
+              label: 'رسالة المستخدمين',
+              maxLines: 3,
+              validator: (value) => value == null || value.isEmpty ? 'مطلوب' : null,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'يمكن استخدام {clientName} أو {userName} في الرسائل',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -841,17 +367,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTi
         await settingsController.updateAdminSettings(settings);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم حفظ الإعدادات بنجاح'),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: Text('تم حفظ الإعدادات بنجاح')),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في حفظ الإعدادات: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('خطأ في حفظ الإعدادات: ${e.toString()}')),
         );
       }
     }
@@ -859,7 +379,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> with SingleTi
 
   @override
   void dispose() {
-    _tabController.dispose();
     _greenDaysController.dispose();
     _yellowDaysController.dispose();
     _redDaysController.dispose();
