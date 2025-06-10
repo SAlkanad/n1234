@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Include shared preferences -->
+    <include domain="sharedpref" path="."/>
+    
+    <!-- Include database files -->
+    <include domain="database" path="."/>
+    
+    <!-- Include app files -->
+    <include domain="file" path="."/>
+    
+    <!-- Exclude sensitive files -->
+    <exclude domain="sharedpref" path="FlutterSecureStorage"/>
+    <exclude domain="file" path="key_store"/>
+    <exclude domain="file" path="credentials"/>
+    
+    <!-- Exclude cache -->
+    <exclude domain="cache" path="."/>
+    
+    <!-- Exclude temporary files -->
+    <exclude domain="file" path="temp"/>
+    <exclude domain="file" path="tmp"/>
+    
+    <!-- Exclude images for privacy -->
+    <exclude domain="file" path="images/private"/>
+    
+    <!-- Include only essential app data -->
+    <include domain="file" path="settings"/>
+    <include domain="file" path="user_preferences"/>
+</full-backup-content>

@@ -5,17 +5,33 @@ import '../services/auth_service.dart';
 class AuthController extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
+  bool _isAutoLoading = false;
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get isAutoLoading => _isAutoLoading;
   bool get isLoggedIn => _currentUser != null;
 
-  Future<bool> login(String username, String password) async {
+  Future<void> initializeAuth() async {
+    _isAutoLoading = true;
+    notifyListeners();
+
+    try {
+      _currentUser = await AuthService.tryAutoLogin();
+      _isAutoLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isAutoLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> login(String username, String password, {bool rememberMe = false}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _currentUser = await AuthService.login(username, password);
+      _currentUser = await AuthService.login(username, password, rememberMe: rememberMe);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -30,5 +46,9 @@ class AuthController extends ChangeNotifier {
     await AuthService.logout();
     _currentUser = null;
     notifyListeners();
+  }
+
+  Future<Map<String, String?>> getSavedCredentials() async {
+    return await AuthService.getSavedCredentials();
   }
 }

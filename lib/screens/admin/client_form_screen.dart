@@ -5,6 +5,7 @@ import 'dart:io';
 import '../../models/client_model.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/settings_controller.dart';
+import '../../controllers/client_controller.dart';
 import '../../services/database_service.dart';
 import '../../core/widgets/custom_text_field.dart';
 import '../../core/utils/validation_utils.dart';
@@ -24,13 +25,15 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _clientNameController = TextEditingController();
   final _clientPhoneController = TextEditingController();
+  final _clientPhone2Controller = TextEditingController();
   final _agentNameController = TextEditingController();
   final _agentPhoneController = TextEditingController();
   final _notesController = TextEditingController();
   
   PhoneCountry _phoneCountry = PhoneCountry.saudi;
+  PhoneCountry _phoneCountry2 = PhoneCountry.saudi;
   VisaType _visaType = VisaType.umrah;
-  DateTime _entryDate = DateTime.now(); // Default to current date
+  DateTime _entryDate = DateTime.now();
   File? _visaImage;
   File? _passportImage;
   bool _isLoading = false;
@@ -42,7 +45,6 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
       _populateFields();
     }
     
-    // Load settings for status calculation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<SettingsController>(context, listen: false).loadAdminSettings();
     });
@@ -52,7 +54,9 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
     final client = widget.client!;
     _clientNameController.text = client.clientName;
     _clientPhoneController.text = client.clientPhone;
+    _clientPhone2Controller.text = client.clientPhone2 ?? '';
     _phoneCountry = client.phoneCountry;
+    _phoneCountry2 = client.phoneCountry2 ?? PhoneCountry.saudi;
     _visaType = client.visaType;
     _agentNameController.text = client.agentName ?? '';
     _agentPhoneController.text = client.agentPhone ?? '';
@@ -66,6 +70,10 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
       appBar: AppBar(
         title: Text(widget.client == null ? 'إضافة عميل جديد' : 'تعديل العميل'),
         actions: [
+          IconButton(
+            icon: Icon(Icons.sync),
+            onPressed: _refreshData,
+          ),
           IconButton(
             icon: Icon(Icons.save),
             onPressed: _isLoading ? null : _handleSave,
@@ -87,6 +95,12 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
               ),
               SizedBox(height: 16),
 
+              // Primary Phone
+              Text(
+                'الهاتف الأساسي',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -121,6 +135,55 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
                       icon: Icons.phone,
                       keyboardType: TextInputType.phone,
                       validator: (value) => ValidationUtils.validatePhone(value, _phoneCountry),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+
+              // Secondary Phone
+              Text(
+                'الهاتف الثانوي (اختياري)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<PhoneCountry>(
+                      value: _phoneCountry2,
+                      decoration: InputDecoration(
+                        labelText: 'الدولة',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: PhoneCountry.saudi,
+                          child: Text('السعودية (+966)'),
+                        ),
+                        DropdownMenuItem(
+                          value: PhoneCountry.yemen,
+                          child: Text('اليمن (+967)'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() => _phoneCountry2 = value!);
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: CustomTextField(
+                      controller: _clientPhone2Controller,
+                      label: 'الرقم الثاني',
+                      icon: Icons.phone_android,
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return null;
+                        return ValidationUtils.validatePhone(value, _phoneCountry2);
+                      },
                     ),
                   ),
                 ],
@@ -277,6 +340,21 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    try {
+      final settingsController = Provider.of<SettingsController>(context, listen: false);
+      await settingsController.loadAdminSettings();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم تحديث البيانات')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ في تحديث البيانات')),
+      );
+    }
+  }
+
   Future<void> _handleSave() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -284,8 +362,8 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
       try {
         final authController = Provider.of<AuthController>(context, listen: false);
         final settingsController = Provider.of<SettingsController>(context, listen: false);
+        final clientController = Provider.of<ClientController>(context, listen: false);
         
-        // Get status settings for calculation
         final settings = settingsController.adminSettings;
         final statusSettings = settings['clientStatusSettings'] ?? {};
         final greenDays = statusSettings['greenDays'] ?? 30;
@@ -296,7 +374,9 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
           id: widget.client?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
           clientName: _clientNameController.text,
           clientPhone: _clientPhoneController.text,
+          clientPhone2: _clientPhone2Controller.text.isEmpty ? null : _clientPhone2Controller.text,
           phoneCountry: _phoneCountry,
+          phoneCountry2: _clientPhone2Controller.text.isEmpty ? null : _phoneCountry2,
           visaType: _visaType,
           agentName: _agentNameController.text.isEmpty ? null : _agentNameController.text,
           agentPhone: _agentPhoneController.text.isEmpty ? null : _agentPhoneController.text,
@@ -316,6 +396,13 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
 
         await DatabaseService.saveClient(client, _visaImage, _passportImage);
         
+        // Update controller
+        if (widget.client == null) {
+          await clientController.addClient(client);
+        } else {
+          await clientController.updateClient(client);
+        }
+        
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('تم حفظ العميل بنجاح')),
@@ -334,6 +421,7 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
   void dispose() {
     _clientNameController.dispose();
     _clientPhoneController.dispose();
+    _clientPhone2Controller.dispose();
     _agentNameController.dispose();
     _agentPhoneController.dispose();
     _notesController.dispose();

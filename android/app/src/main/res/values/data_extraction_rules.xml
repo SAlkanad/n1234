@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Include essential app data for cloud backup -->
+        <include domain="sharedpref" path="user_settings"/>
+        <include domain="sharedpref" path="app_preferences"/>
+        <include domain="database" path="app_database.db"/>
+        
+        <!-- Exclude sensitive user data -->
+        <exclude domain="sharedpref" path="login_credentials"/>
+        <exclude domain="sharedpref" path="auth_tokens"/>
+        <exclude domain="file" path="private_keys"/>
+        <exclude domain="file" path="user_images"/>
+        <exclude domain="database" path="sensitive_data.db"/>
+        
+        <!-- Exclude cache and temporary files -->
+        <exclude domain="cache" path="."/>
+        <exclude domain="file" path="temp"/>
+        <exclude domain="file" path="cache"/>
+    </cloud-backup>
+    
+    <device-transfer>
+        <!-- Include user settings and preferences -->
+        <include domain="sharedpref" path="user_settings"/>
+        <include domain="sharedpref" path="app_preferences"/>
+        <include domain="file" path="user_data"/>
+        
+        <!-- Exclude sensitive authentication data -->
+        <exclude domain="sharedpref" path="auth_tokens"/>
+        <exclude domain="sharedpref" path="login_credentials"/>
+        <exclude domain="file" path="encryption_keys"/>
+        
+        <!-- Exclude images for privacy -->
+        <exclude domain="file" path="images"/>
+        <exclude domain="file" path="photos"/>
+        
+        <!-- Exclude cache -->
+        <exclude domain="cache" path="."/>
+    </device-transfer>
+</data-extraction-rules>

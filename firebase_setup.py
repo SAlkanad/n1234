@@ -330,7 +330,7 @@ class DatabaseSetup:
 def main():
     """Main function to run the database setup"""
     # Use the service account file in the same directory
-    setup = DatabaseSetup('umrah-visa-manager-50d91-firebase-adminsdk-fbsvc-2384544386.json')
+    setup = DatabaseSetup('umrah-visa-manager-50d91-firebase-adminsdk-fbsvc-2384544386.json386.json')
     
     # Setup the database
     setup.setup_complete_database()

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="colorPrimary">#2196F3</color>
+    <color name="colorPrimaryDark">#1976D2</color>
+    <color name="colorAccent">#03DAC5</color>
+    
+    <!-- Status Colors -->
+    <color name="colorGreen">#4CAF50</color>
+    <color name="colorYellow">#FF9800</color>
+    <color name="colorRed">#F44336</color>
+    <color name="colorWhite">#9E9E9E</color>
+    
+    <!-- Background Colors -->
+    <color name="backgroundColor">#FFFFFF</color>
+    <color name="backgroundColorDark">#121212</color>
+    <color name="surfaceColor">#F5F5F5</color>
+    
+    <!-- Text Colors -->
+    <color name="textColorPrimary">#212121</color>
+    <color name="textColorSecondary">#757575</color>
+    <color name="textColorHint">#BDBDBD</color>
+    
+    <!-- Card Colors -->
+    <color name="cardBackground">#FFFFFF</color>
+    <color name="cardElevation">#E0E0E0</color>
+    
+    <!-- Notification Colors -->
+    <color name="notificationColor">#2196F3</color>
+    <color name="notificationAccent">#03DAC5</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradientStart">#42A5F5</color>
+    <color name="gradientEnd">#1E88E5</color>
+    
+    <!-- Transparent -->
+    <color name="transparent">#00000000</color>
+    
+    <!-- Launch Screen -->
+    <color name="launchBackground">#2196F3</color>
+</resources>

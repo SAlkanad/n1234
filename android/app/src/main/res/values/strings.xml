@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">نظام إدارة المسافرين</string>
+    <string name="app_name_short">المسافرين</string>
+    
+    <!-- Notification Channels -->
+    <string name="default_notification_channel_id">passengers_channel</string>
+    <string name="default_notification_channel_name">إشعارات المسافرين</string>
+    <string name="default_notification_channel_description">إشعارات حول انتهاء صلاحية التأشيرات والحسابات</string>
+    
+    <!-- Status Messages -->
+    <string name="status_green">آمن</string>
+    <string name="status_yellow">تحذير</string>
+    <string name="status_red">خطر</string>
+    <string name="status_white">خرج</string>
+    
+    <!-- Common Actions -->
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="delete">حذف</string>
+    <string name="edit">تعديل</string>
+    <string name="add">إضافة</string>
+    <string name="sync">تحديث</string>
+    <string name="search">بحث</string>
+    <string name="loading">جاري التحميل...</string>
+    
+    <!-- Error Messages -->
+    <string name="error_network">خطأ في الاتصال بالإنترنت</string>
+    <string name="error_general">حدث خطأ غير متوقع</string>
+    <string name="error_login">خطأ في تسجيل الدخول</string>
+    <string name="error_permission">لا توجد صلاحية للوصول</string>
+    
+    <!-- Success Messages -->
+    <string name="success_save">تم الحفظ بنجاح</string>
+    <string name="success_update">تم التحديث بنجاح</string>
+    <string name="success_delete">تم الحذف بنجاح</string>
+    <string name="success_sync">تم التحديث بنجاح</string>
+    
+    <!-- Validation Messages -->
+    <string name="validation_required">هذا الحقل مطلوب</string>
+    <string name="validation_email">البريد الإلكتروني غير صحيح</string>
+    <string name="validation_phone">رقم الهاتف غير صحيح</string>
+    <string name="validation_password">كلمة المرور يجب أن تكون 6 أحرف على الأقل</string>
+    
+    <!-- Permissions -->
+    <string name="permission_camera_title">صلاحية الكاميرا</string>
+    <string name="permission_camera_message">نحتاج إلى صلاحية الكاميرا لالتقاط صور التأشيرات والجوازات</string>
+    <string name="permission_storage_title">صلاحية التخزين</string>
+    <string name="permission_storage_message">نحتاج إلى صلاحية التخزين لحفظ الصور</string>
+    <string name="permission_phone_title">صلاحية الهاتف</string>
+    <string name="permission_phone_message">نحتاج إلى صلاحية الهاتف لإجراء المكالمات</string>
+    
+    <!-- Notifications -->
+    <string name="notification_client_expiring">تنتهي تأشيرة العميل قريباً</string>
+    <string name="notification_user_expiring">ينتهي حسابك قريباً</string>
+    <string name="notification_tap_to_view">اضغط للعرض</string>
+    
+    <!-- WhatsApp -->
+    <string name="whatsapp_not_installed">الواتساب غير مثبت على الجهاز</string>
+    <string name="whatsapp_error">خطأ في فتح الواتساب</string>
+    
+    <!-- File Operations -->
+    <string name="file_upload_success">تم رفع الملف بنجاح</string>
+    <string name="file_upload_error">خطأ في رفع الملف</string>
+    <string name="file_download_success">تم تحميل الملف بنجاح</string>
+    <string name="file_download_error">خطأ في تحميل الملف</string>
+    
+    <!-- Backup and Restore -->
+    <string name="backup_success">تم إنشاء النسخة الاحتياطية بنجاح</string>
+    <string name="backup_error">خطأ في إنشاء النسخة الاحتياطية</string>
+    <string name="restore_success">تم استعادة البيانات بنجاح</string>
+    <string name="restore_error">خطأ في استعادة البيانات</string>
+</resources>

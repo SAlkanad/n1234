@@ -17,15 +17,16 @@ class DatabaseService {
       String? passportImageUrl;
 
       if (visaImage != null) {
-        visaImageUrl = await ImageService.uploadImage(visaImage, 'visa_${client.id}');
+        visaImageUrl = await ImageService.uploadCompressedImage(visaImage, 'visa_${client.id}');
       }
       if (passportImage != null) {
-        passportImageUrl = await ImageService.uploadImage(passportImage, 'passport_${client.id}');
+        passportImageUrl = await ImageService.uploadCompressedImage(passportImage, 'passport_${client.id}');
       }
 
       final updatedClient = client.copyWith(
         visaImageUrl: visaImageUrl ?? client.visaImageUrl,
         passportImageUrl: passportImageUrl ?? client.passportImageUrl,
+        updatedAt: DateTime.now(),
       );
 
       await _firestore
@@ -70,41 +71,52 @@ class DatabaseService {
 
   static Future<void> updateClientStatus(String clientId, ClientStatus status) async {
     try {
-      await _firestore
-          .collection(FirebaseConstants.clientsCollection)
-          .doc(clientId)
-          .update({
+      final updateData = {
         'status': status.toString().split('.').last,
         'hasExited': status == ClientStatus.white,
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
-      });
+      };
+
+      // If marking as exited, record exit date
+      if (status == ClientStatus.white) {
+        updateData['exitDate'] = DateTime.now().millisecondsSinceEpoch;
+      }
+
+      await _firestore
+          .collection(FirebaseConstants.clientsCollection)
+          .doc(clientId)
+          .update(updateData);
     } catch (e) {
       throw Exception('خطأ في تحديث حالة العميل: ${e.toString()}');
     }
   }
 
-  // New method for updating client with status and days remaining
   static Future<void> updateClientWithStatus(
     String clientId,
     ClientStatus status,
     int daysRemaining
   ) async {
     try {
-      await _firestore
-          .collection(FirebaseConstants.clientsCollection)
-          .doc(clientId)
-          .update({
+      final updateData = {
         'status': status.toString().split('.').last,
         'daysRemaining': daysRemaining,
         'hasExited': status == ClientStatus.white,
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
-      });
+      };
+
+      if (status == ClientStatus.white) {
+        updateData['exitDate'] = DateTime.now().millisecondsSinceEpoch;
+      }
+
+      await _firestore
+          .collection(FirebaseConstants.clientsCollection)
+          .doc(clientId)
+          .update(updateData);
     } catch (e) {
       throw Exception('خطأ في تحديث حالة العميل: ${e.toString()}');
     }
   }
 
-  // Method to get clients by status
   static Future<List<ClientModel>> getClientsByStatus(ClientStatus status) async {
     try {
       final querySnapshot = await _firestore
@@ -122,7 +134,6 @@ class DatabaseService {
     }
   }
 
-  // Method to get expiring clients
   static Future<List<ClientModel>> getExpiringClients(int daysThreshold) async {
     try {
       final querySnapshot = await _firestore
@@ -142,12 +153,53 @@ class DatabaseService {
 
   static Future<void> deleteClient(String clientId) async {
     try {
+      // Get client data first to delete images
+      final doc = await _firestore
+          .collection(FirebaseConstants.clientsCollection)
+          .doc(clientId)
+          .get();
+      
+      if (doc.exists) {
+        final client = ClientModel.fromMap(doc.data()!);
+        
+        // Delete images if they exist
+        if (client.visaImageUrl != null) {
+          await ImageService.deleteImage(client.visaImageUrl!);
+        }
+        if (client.passportImageUrl != null) {
+          await ImageService.deleteImage(client.passportImageUrl!);
+        }
+      }
+
       await _firestore
           .collection(FirebaseConstants.clientsCollection)
           .doc(clientId)
           .delete();
     } catch (e) {
       throw Exception('خطأ في حذف العميل: ${e.toString()}');
+    }
+  }
+
+  // Search clients
+  static Future<List<ClientModel>> searchClients(String query, String? userId) async {
+    try {
+      Query queryRef = _firestore.collection(FirebaseConstants.clientsCollection);
+      
+      // Filter by user if not admin
+      if (userId != null) {
+        queryRef = queryRef.where('createdBy', isEqualTo: userId);
+      }
+
+      final querySnapshot = await queryRef.get();
+      
+      final allClients = querySnapshot.docs
+          .map((doc) => ClientModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+
+      // Filter locally for better search
+      return allClients.where((client) => client.matchesSearch(query)).toList();
+    } catch (e) {
+      throw Exception('خطأ في البحث: ${e.toString()}');
     }
   }
 
@@ -181,6 +233,17 @@ class DatabaseService {
 
   static Future<void> deleteUser(String userId) async {
     try {
+      // Delete all clients created by this user
+      final clientsSnapshot = await _firestore
+          .collection(FirebaseConstants.clientsCollection)
+          .where('createdBy', isEqualTo: userId)
+          .get();
+
+      for (final doc in clientsSnapshot.docs) {
+        await deleteClient(doc.id);
+      }
+
+      // Delete user
       await _firestore
           .collection(FirebaseConstants.usersCollection)
           .doc(userId)
@@ -249,6 +312,7 @@ class DatabaseService {
           .collection(FirebaseConstants.notificationsCollection)
           .where('targetUserId', isEqualTo: userId)
           .orderBy('createdAt', descending: true)
+          .limit(50)
           .get();
 
       return querySnapshot.docs
@@ -264,6 +328,7 @@ class DatabaseService {
       final querySnapshot = await _firestore
           .collection(FirebaseConstants.notificationsCollection)
           .orderBy('createdAt', descending: true)
+          .limit(100)
           .get();
 
       return querySnapshot.docs

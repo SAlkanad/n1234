@@ -5,10 +5,15 @@ import '../core/utils/status_calculator.dart';
 
 class ClientController extends ChangeNotifier {
   List<ClientModel> _clients = [];
+  List<ClientModel> _filteredClients = [];
   bool _isLoading = false;
+  String _searchQuery = '';
+  ClientStatus? _statusFilter;
 
-  List<ClientModel> get clients => _clients;
+  List<ClientModel> get clients => _filteredClients;
   bool get isLoading => _isLoading;
+  String get searchQuery => _searchQuery;
+  ClientStatus? get statusFilter => _statusFilter;
 
   Future<void> loadClients(String userId, {bool isAdmin = false}) async {
     _isLoading = true;
@@ -42,6 +47,7 @@ class ClientController extends ChangeNotifier {
         _clients[i] = updatedClient;
       }
 
+      _applyFilters();
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -51,15 +57,50 @@ class ClientController extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshClients(String userId, {bool isAdmin = false}) async {
+    await loadClients(userId, isAdmin: isAdmin);
+  }
+
+  void searchClients(String query) {
+    _searchQuery = query;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void filterByStatus(ClientStatus? status) {
+    _statusFilter = status;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    _searchQuery = '';
+    _statusFilter = null;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  void _applyFilters() {
+    _filteredClients = _clients.where((client) {
+      bool matchesSearch = _searchQuery.isEmpty || client.matchesSearch(_searchQuery);
+      bool matchesStatus = _statusFilter == null || client.status == _statusFilter;
+      return matchesSearch && matchesStatus;
+    }).toList();
+  }
+
   Future<void> updateClientStatus(String clientId, ClientStatus status) async {
     try {
       await DatabaseService.updateClientStatus(clientId, status);
+      
+      // Update local data
       final index = _clients.indexWhere((client) => client.id == clientId);
       if (index != -1) {
         _clients[index] = _clients[index].copyWith(
           status: status,
           hasExited: status == ClientStatus.white,
+          exitDate: status == ClientStatus.white ? DateTime.now() : null,
         );
+        _applyFilters();
         notifyListeners();
       }
     } catch (e) {
@@ -71,14 +112,34 @@ class ClientController extends ChangeNotifier {
     try {
       await DatabaseService.deleteClient(clientId);
       _clients.removeWhere((client) => client.id == clientId);
+      _applyFilters();
       notifyListeners();
     } catch (e) {
       throw e;
     }
   }
 
-  Future<void> refreshClients(String userId, {bool isAdmin = false}) async {
-    await loadClients(userId, isAdmin: isAdmin);
+  Future<void> addClient(ClientModel client) async {
+    try {
+      _clients.insert(0, client);
+      _applyFilters();
+      notifyListeners();
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  Future<void> updateClient(ClientModel client) async {
+    try {
+      final index = _clients.indexWhere((c) => c.id == client.id);
+      if (index != -1) {
+        _clients[index] = client;
+        _applyFilters();
+        notifyListeners();
+      }
+    } catch (e) {
+      throw e;
+    }
   }
 
   List<ClientModel> getClientsByStatus(ClientStatus status) {
@@ -98,4 +159,11 @@ class ClientController extends ChangeNotifier {
   int getActiveClientsCount() => _clients.where((c) => !c.hasExited).length;
   
   int getExitedClientsCount() => _clients.where((c) => c.hasExited).length;
+
+  int getFilteredCount() => _filteredClients.length;
+
+  List<ClientModel> getGreenClients() => getClientsByStatus(ClientStatus.green);
+  List<ClientModel> getYellowClients() => getClientsByStatus(ClientStatus.yellow);
+  List<ClientModel> getRedClients() => getClientsByStatus(ClientStatus.red);
+  List<ClientModel> getExitedClients() => getClientsByStatus(ClientStatus.white);
 }

@@ -8,6 +8,7 @@ class ClientCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final Function(ClientStatus)? onStatusChange;
+  final VoidCallback? onViewImages;
 
   const ClientCard({
     Key? key,
@@ -15,6 +16,7 @@ class ClientCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.onStatusChange,
+    this.onViewImages,
   }) : super(key: key);
 
   @override
@@ -41,14 +43,29 @@ class ClientCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 8),
+            
+            // Primary phone
             if (client.clientPhone.isNotEmpty)
               Row(
                 children: [
                   Icon(Icons.phone, size: 16, color: Colors.grey),
                   SizedBox(width: 4),
-                  Text('الهاتف: ${client.clientPhone}'),
+                  Text('الهاتف الأساسي: ${client.clientPhone}'),
                 ],
               ),
+            
+            // Secondary phone
+            if (client.clientPhone2 != null && client.clientPhone2!.isNotEmpty) ...[
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.phone_android, size: 16, color: Colors.grey),
+                  SizedBox(width: 4),
+                  Text('الهاتف الثانوي: ${client.clientPhone2}'),
+                ],
+              ),
+            ],
+            
             SizedBox(height: 4),
             Row(
               children: [
@@ -57,6 +74,7 @@ class ClientCard extends StatelessWidget {
                 Text('نوع التأشيرة: ${_getVisaTypeText(client.visaType)}'),
               ],
             ),
+            
             if (client.agentName != null && client.agentName!.isNotEmpty) ...[
               SizedBox(height: 4),
               Row(
@@ -67,39 +85,81 @@ class ClientCard extends StatelessWidget {
                 ],
               ),
             ],
-            SizedBox(height: 12),
-            Row(
-              children: [
-                if (!client.hasExited && client.clientPhone.isNotEmpty) ...[
-                  IconButton(
-                    icon: Icon(Icons.message, color: Colors.green),
-                    onPressed: () => _sendWhatsApp(context),
-                    tooltip: 'إرسال واتساب',
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.call, color: Colors.blue),
-                    onPressed: () => _makeCall(),
-                    tooltip: 'اتصال',
+            
+            // Show if client has exited
+            if (client.hasExited && client.exitDate != null) ...[
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.flight_takeoff, size: 16, color: Colors.green),
+                  SizedBox(width: 4),
+                  Text(
+                    'تاريخ الخروج: ${client.exitDate!.day}/${client.exitDate!.month}/${client.exitDate!.year}',
+                    style: TextStyle(color: Colors.green),
                   ),
                 ],
-                Spacer(),
+              ),
+            ],
+            
+            SizedBox(height: 12),
+            
+            // Action buttons
+            Wrap(
+              spacing: 8,
+              children: [
+                // WhatsApp buttons for all phone numbers
+                if (!client.hasExited && client.clientPhone.isNotEmpty)
+                  _buildPhoneActionButton(
+                    context,
+                    client.clientPhone,
+                    client.phoneCountry,
+                    'الأساسي',
+                    true,
+                  ),
+                
+                if (!client.hasExited && client.clientPhone2 != null && client.clientPhone2!.isNotEmpty)
+                  _buildPhoneActionButton(
+                    context,
+                    client.clientPhone2!,
+                    client.phoneCountry2!,
+                    'الثانوي',
+                    false,
+                  ),
+                
+                // View images button
+                if (onViewImages != null && _hasImages())
+                  ActionChip(
+                    avatar: Icon(Icons.photo, size: 16),
+                    label: Text('الصور'),
+                    onPressed: onViewImages,
+                    backgroundColor: Colors.purple.shade100,
+                  ),
+                
+                // Edit button
                 if (onEdit != null)
-                  IconButton(
-                    icon: Icon(Icons.edit, color: Colors.orange),
+                  ActionChip(
+                    avatar: Icon(Icons.edit, size: 16),
+                    label: Text('تعديل'),
                     onPressed: onEdit,
-                    tooltip: 'تعديل',
+                    backgroundColor: Colors.orange.shade100,
                   ),
+                
+                // Exit status button
                 if (onStatusChange != null && !client.hasExited)
-                  IconButton(
-                    icon: Icon(Icons.exit_to_app, color: Colors.grey),
+                  ActionChip(
+                    avatar: Icon(Icons.exit_to_app, size: 16),
+                    label: Text('خرج'),
                     onPressed: () => onStatusChange!(ClientStatus.white),
-                    tooltip: 'تحديد كخارج',
+                    backgroundColor: Colors.grey.shade100,
                   ),
+                
+                // Delete button
                 if (onDelete != null)
-                  IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
+                  ActionChip(
+                    avatar: Icon(Icons.delete, size: 16),
+                    label: Text('حذف'),
                     onPressed: () => _confirmDelete(context),
-                    tooltip: 'حذف',
+                    backgroundColor: Colors.red.shade100,
                   ),
               ],
             ),
@@ -107,6 +167,59 @@ class ClientCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildPhoneActionButton(
+    BuildContext context,
+    String phone,
+    PhoneCountry country,
+    String label,
+    bool isPrimary,
+  ) {
+    return PopupMenuButton<String>(
+      child: ActionChip(
+        avatar: Icon(
+          isPrimary ? Icons.phone : Icons.phone_android,
+          size: 16,
+        ),
+        label: Text(label),
+        backgroundColor: Colors.green.shade100,
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'whatsapp',
+          child: Row(
+            children: [
+              Icon(Icons.message, color: Colors.green, size: 20),
+              SizedBox(width: 8),
+              Text('واتساب'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'call',
+          child: Row(
+            children: [
+              Icon(Icons.call, color: Colors.blue, size: 20),
+              SizedBox(width: 8),
+              Text('اتصال'),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        if (value == 'whatsapp') {
+          _sendWhatsApp(context, phone, country);
+        } else if (value == 'call') {
+          _makeCall(phone, country);
+        }
+      },
+    );
+  }
+
+  bool _hasImages() {
+    return (client.visaImageUrl != null && client.visaImageUrl!.isNotEmpty) ||
+           (client.passportImageUrl != null && client.passportImageUrl!.isNotEmpty);
   }
 
   String _getVisaTypeText(VisaType type) {
@@ -122,11 +235,11 @@ class ClientCard extends StatelessWidget {
     }
   }
 
-  void _sendWhatsApp(BuildContext context) async {
+  void _sendWhatsApp(BuildContext context, String phone, PhoneCountry country) async {
     try {
       await WhatsAppService.sendClientMessage(
-        phoneNumber: client.clientPhone,
-        country: client.phoneCountry,
+        phoneNumber: phone,
+        country: country,
         message: 'عزيزي العميل {clientName}، تنتهي صلاحية تأشيرتك قريباً.',
         clientName: client.clientName,
       );
@@ -137,11 +250,11 @@ class ClientCard extends StatelessWidget {
     }
   }
 
-  void _makeCall() async {
+  void _makeCall(String phone, PhoneCountry country) async {
     try {
       await WhatsAppService.callClient(
-        phoneNumber: client.clientPhone,
-        country: client.phoneCountry,
+        phoneNumber: phone,
+        country: country,
       );
     } catch (e) {
       // Handle error silently or show message
